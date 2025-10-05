@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 import glob
 import os
-db_path = '/home/sabankara/personal_developing/car_price/car_prices_test.db'
+db_path = '/home/ubuntumithrandir/python_project/car_price/car_prices_test.db'
 db_directory = os.path.dirname(db_path)
 
 if not os.path.exists(db_directory):
@@ -11,7 +11,7 @@ if not os.path.exists(db_directory):
 # SQLite veritabanı bağlantısı oluşturma
 engine = create_engine(f'sqlite:///{db_path}')
 print(engine)
-file_paths = glob.glob('/home/sabankara/personal_developing/car_price/data/*.xlsx')
+file_paths = glob.glob('/home/ubuntumithrandir/python_project/car_price/data/*.xlsx')
 
 
 def extract_date(file_path):
@@ -54,7 +54,7 @@ for file_path in sorted_files:
 
 
     # Excel dosyasını oku
-    df = pd.read_excel(file_path)
+    df = pd.read_excel(file_path, engine="openpyxl")
 
     # İlk satırı kolon isimleri olarak al ve sıfırdan indeksle
     df.columns = df.iloc[0]
