@@ -5,29 +5,77 @@ import numpy as np
 from sqlalchemy import create_engine
 import yfinance as yf
 
+
+
+
+def fill_missing_months(obj):
+    """
+    obj: DateTimeIndex'e sahip Series veya tek/çok kolonlu DataFrame.
+    Eksik ayları (MS frekansında) önceki ve sonraki değerlerin ortalamasıyla doldurur.
+    İlk/son uçta tek taraf NaN ise sonuç NaN kalır (mantıklı davranış).
+    """
+    if isinstance(obj, pd.Series):
+        s = obj.copy()
+        s.index = pd.to_datetime(s.index)
+        full_idx = pd.date_range(s.index.min(), s.index.max(), freq="MS")
+        s = s.reindex(full_idx)
+        f = s.ffill()
+        b = s.bfill()
+        return (f + b) / 2
+
+    elif isinstance(obj, pd.DataFrame):
+        df = obj.copy()
+        df.index = pd.to_datetime(df.index)
+        full_idx = pd.date_range(df.index.min(), df.index.max(), freq="MS")
+        df = df.reindex(full_idx)
+        f = df.ffill()
+        b = df.bfill()
+        return (f + b) / 2
+
+    else:
+        raise TypeError("fill_missing_months yalnızca Series veya DataFrame kabul eder.")
+
+
 # streamlit run app.py --server.port 8524
 gold_symbol  = 'GC=F'
 usdtry_symbol = 'USDTRY=X'
 bist100_symbol = "XU100.IS"
 btc_symbol = "BTC-USD"
 
-gold_data  = yf.download(gold_symbol, start='2020-01-01', interval='1mo')
-data = yf.download(usdtry_symbol, start='2020-01-01', interval='1mo')
-bist100  = yf.download(bist100_symbol, start='2020-01-01', interval='1mo')
-btc  = yf.download(btc_symbol, start='2020-01-01', interval='1mo')
+gold_data  = yf.download(gold_symbol, start='2020-01-01', interval='1mo',auto_adjust=False)
+data = yf.download(usdtry_symbol, start='2020-01-01', interval='1mo',auto_adjust=False)
+bist100  = yf.download(bist100_symbol, start='2020-01-01', interval='1mo',auto_adjust=False)
+btc  = yf.download(btc_symbol, start='2020-01-01', interval='1mo',auto_adjust=False)
 
 bist100.iloc[:6] = bist100.iloc[:6]/10
 
 
-gold_data['Gram_Altin_Try'] = (gold_data['Close'] / 31.1035) * data['Close'] #TODO buraya bakmalısın
-btc["BTC_Try"] = btc["Close"] *data["Close"]
+                                                                                                                                                                                                                                              
+# NOTE 25.09.2025 eklendi
+
+gold_close = fill_missing_months(gold_data['Close'])
+gold_close = gold_close.squeeze("columns")   
+
+usd_close  = data['Close'].squeeze()             # kolon adı: USDTRY=X
+
+gram_altin_try = (gold_close / 31.1035).align(usd_close, join="inner")[0] * \
+                 gold_close.align(usd_close, join="inner")[1]  # veya concat ile
+
+
+aligned = gram_altin_try.reindex(gold_data.index)
+gold_data[("Gram_Altin_Try", "GC=F")] = aligned
+common_idx = gold_data.index.intersection(gram_altin_try.index)
+gold_data.loc[common_idx, ("Gram_Altin_Try", "GC=F")] = gram_altin_try.loc[common_idx]
+# NOTE 25.09.2025 eklendi sonu
+
+btc["BTC_Try"] = btc["Close"]["BTC-USD"]*data["Close"]["USDTRY=X"] 
 
 usd_try_monthly = data[['Close']].reset_index()
 gold_data_monthly = gold_data.reset_index()
 bist100_monthly = bist100[['Close']].reset_index()
 btc_monthly = btc.reset_index()
 
-engine = create_engine('sqlite:////home/sabankara/personal_developing/car_price/car_prices_test.db')
+engine = create_engine('sqlite:////home/ubuntumithrandir/python_project/car_price/car_prices_test.db')
 
 st.title('Araç Değerleri, Dolar Bazında Analiz ve Kendi Aralarında Kıyaslama')
 
@@ -143,6 +191,11 @@ if st.session_state.selected_vehicles:
 
     # bist100_monthly = bist100_monthly.drop(columns=['Open', 'High', 'Low', 'Adj Close', 'Volume'])
 
+
+    usd_try_monthly.columns = usd_try_monthly.columns.get_level_values(0)
+    gold_data_monthly.columns = gold_data_monthly.columns.get_level_values(0)
+    bist100_monthly.columns = bist100_monthly.columns.get_level_values(0)
+    btc_monthly.columns = btc_monthly.columns.get_level_values(0)
 
 
     # USD/TRY kuru ile birleştirme
