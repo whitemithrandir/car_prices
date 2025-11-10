@@ -1,0 +1,37 @@
+# =========================
+# App configuration (edit me)
+# =========================
+
+[paths]
+# Uygulama klasörü (boş bırakılırsa bu dosyanın bulunduğu klasör baz alınır)
+app_dir = ".../car_price_app.py"
+
+# Sanal ortam klasörü (boş ise: {app_dir}/myenv)
+venv_dir = ""
+
+# Veritabanı dosyası (boş ise: {app_dir}/car_prices_test.db)
+db_path  = ""
+
+# Excel veri klasörü (boş ise: {app_dir}/data)
+data_dir = ""
+
+# Log klasörü (boş ise: {app_dir}/logs)
+logs_dir = ".../car_prices/data"
+
+[server]
+port = 8220
+address = "0.0.0.0"
+headless = true
+gather_usage_stats = false
+
+[markets]
+gold_symbol   = "GC=F"
+usdtry_symbol = "USDTRY=X"
+bist100_symbol= "XU100.IS"
+btc_symbol    = "BTC-USD"
+
+[app]
+# Streamlit başlık/başlangıç yılı-aralığı gibi ufak parametreler
+title = "Araç Değerleri, Dolar Bazında Analiz ve Kıyaslama"
+year_min = 2010
+year_max = 2025
